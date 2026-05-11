@@ -15,7 +15,7 @@ The goal is to compare a baseline Transformer model and a LoRA-adapted Transform
 
 ## Current Status
 
-- [ ] Transformer baseline implementation
+- [x] Transformer baseline implementation
 - [ ] Dataset preprocessing
 - [ ] Training loop
 - [ ] Baseline evaluation
