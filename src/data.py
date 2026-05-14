@@ -13,29 +13,33 @@ BOS = 2
 EOS = 3
 
 class TranslationDataset(Dataset):
-  def __init__(self, df):
-    self.df = df
+    def __init__(self, df, src_sp, tgt_sp):
+        self.df = df.reset_index(drop=True)
+        self.src_sp = src_sp
+        self.tgt_sp = tgt_sp
 
-  def __len__(self):
-    return len(self.df)
+    def __len__(self):
+        return len(self.df)
 
-  def __getitem__(self, idx):
-    src = self.df.iloc[idx]["src"]
-    tgt = self.df.iloc[idx]["tgt"]
+    def __getitem__(self, idx):
+        src = self.df.iloc[idx]["src"]
+        tgt = self.df.iloc[idx]["tgt"]
 
-    return encode_pair(src, tgt)
-  
-def encode_pair(src, tgt):
-  BOS = 2
-  EOS = 3
+        return encode_pair(
+            src=src,
+            tgt=tgt,
+            src_sp=self.src_sp,
+            tgt_sp=self.tgt_sp
+        )
 
-  src_ids = src_sp.encode(src, out_type=int) + [EOS]
-  tgt_ids = [BOS] + tgt_sp.encode(tgt, out_type=int) + [EOS]
 
-  return src_ids, tgt_ids
+def encode_pair(src, tgt, src_sp, tgt_sp):
+    src_ids = src_sp.encode(str(src), out_type=int) + [EOS]
+    tgt_ids = [BOS] + tgt_sp.encode(str(tgt), out_type=int) + [EOS]
+
+    return src_ids, tgt_ids
 
 def collate_fn(batch):
-
     src_batch, tgt_batch = zip(*batch)
 
     src_batch = [
@@ -63,17 +67,19 @@ def collate_fn(batch):
     return src_batch, tgt_batch
 
 def make_src_mask(src_batch):
-  src_mask = (src_batch != PAD).unsqueeze(-2)
-  return src_mask
+    src_mask = (src_batch != PAD).unsqueeze(-2)
+
+    return src_mask
 
 def make_tgt_mask(tgt_input):
     tgt_pad_mask = (tgt_input != PAD).unsqueeze(-2)
-    
+
     size = tgt_input.size(1)
     future_mask = subsequent_mask(size).to(tgt_input.device)
-    
+    future_mask = future_mask.bool()
+
     tgt_mask = tgt_pad_mask & future_mask
-    
+
     return tgt_mask
 
 def make_batch(src, tgt):
@@ -98,7 +104,7 @@ def build_dataloader(
     required_columns = {"src", "tgt"}
     if not required_columns.issubset(df.columns):
         raise ValueError(f"parquet must contain columns: {required_columns}")
-
+    df = df[["src", "tgt"]].dropna().reset_index(drop=True)
     src_sp = spm.SentencePieceProcessor()
     src_sp.load(src_spm_path)
 
@@ -112,7 +118,7 @@ def build_dataloader(
     )
 
     dataloader = DataLoader(
-        dataset,
+        dataset=dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         collate_fn=collate_fn,
