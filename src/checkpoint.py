@@ -37,15 +37,19 @@ def find_latest_checkpoint(save_dir):
 
     return os.path.join(save_dir, checkpoint_files[-1])
 
-def load_model_checkpoint(model, checkpoint_path, device):
+def load_model_checkpoint(model, save_dir, device):
+    checkpoint_path = find_latest_checkpoint(save_dir)
+
+    if checkpoint_path is None:
+        raise FileNotFoundError(f"No checkpoint found in {save_dir}")
+
     checkpoint = torch.load(checkpoint_path, map_location=device)
 
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
-    model.eval()
 
-    print(f"Checkpoint loaded for evaluation: {checkpoint_path}")
-    print(f"Epoch: {checkpoint.get('epoch')}")
+    print(f"Loaded checkpoint: {checkpoint_path}")
+    print(f"Epoch: {checkpoint['epoch']}")
     print(f"Train loss: {checkpoint.get('train_loss')}")
     print(f"Valid loss: {checkpoint.get('valid_loss')}")
 
