@@ -16,8 +16,8 @@ The goal is to compare a baseline Transformer model and a LoRA-adapted Transform
 ## Current Status
 
 - [x] Transformer baseline implementation
-- [ ] Dataset preprocessing
-- [ ] Training loop
+- [x] Dataset preprocessing
+- [x] Training loop
 - [ ] Baseline evaluation
 - [ ] LoRA module implementation
 - [ ] LoRA training
@@ -44,11 +44,11 @@ enko-transformer-lora/
 │   │   ├── transformer.py
 │   │   └── lora.py
 │   ├── data.py
-│   ├── train.py
-│   ├── evaluate.py
 │   └── inference.py
 ├── checkpoints/
 ├── results/
 │   ├── baseline_result.md
 │   └── lora_result.md
+├── train.py
+├── evaluate.py
 └── .gitignore
