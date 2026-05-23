@@ -36,3 +36,28 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+cat >> .gitignore <<'EOF'
+
+# Data
+data/
+raw_data/
+*.parquet
+*.xlsx
+*.csv
+
+# Checkpoints / models
+checkpoints/
+outputs/
+*.pt
+*.pth
+*.ckpt
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Logs
+runs/
+wandb/
+EOF
