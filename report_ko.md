@@ -401,8 +401,7 @@ Baseline 모델은 전체 trainable parameter를 업데이트하기 때문에 ta
 ```text
 enko-transformer-lora/
 ├── README.md
-├── report_en.md
-├── report_ko.md
+├── report.md
 ├── requirements.txt
 ├── configs/
 │   ├── baseline.yaml
@@ -417,13 +416,14 @@ enko-transformer-lora/
 │   │   ├── transformer.py
 │   │   └── lora.py
 │   ├── data.py
-│   ├── train.py
-│   ├── evaluate.py
+│   ├── checkpoint.py
 │   └── inference.py
 ├── checkpoints/
 ├── results/
 │   ├── baseline_result.md
 │   └── lora_result.md
+├── train.py
+├── evaluate.py
 └── .gitignore
 ```
 
@@ -432,8 +432,8 @@ enko-transformer-lora/
 ## 14. 현재 진행 상태
 
 - [x] Transformer baseline implementation
-- [ ] Dataset preprocessing
-- [ ] Training loop
+- [x] Dataset preprocessing
+- [x] Training loop
 - [ ] Baseline evaluation
 - [ ] LoRA module implementation
 - [ ] LoRA training

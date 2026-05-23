@@ -392,6 +392,7 @@ Future improvements include:
 ```text
 enko-transformer-lora/
 ├── README.md
+├── report.md
 ├── requirements.txt
 ├── configs/
 │   ├── baseline.yaml
@@ -406,14 +407,15 @@ enko-transformer-lora/
 │   │   ├── transformer.py
 │   │   └── lora.py
 │   ├── data.py
-│   ├── train.py
-│   ├── evaluate.py
+│   ├── checkpoint.py
 │   └── inference.py
 ├── checkpoints/
 ├── results/
 │   ├── baseline_result.md
 │   └── lora_result.md
-└── report.md
+├── train.py
+├── evaluate.py
+└── .gitignore
 ```
 
 ---
@@ -421,8 +423,8 @@ enko-transformer-lora/
 ## 14. Current Status
 
 - [x] Transformer baseline implementation
-- [ ] Dataset preprocessing
-- [ ] Training loop
+- [x] Dataset preprocessing
+- [x] Training loop
 - [ ] Baseline evaluation
 - [ ] LoRA module implementation
 - [ ] LoRA training
