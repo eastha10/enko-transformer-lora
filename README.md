@@ -1,8 +1,8 @@
-# English-Korean Transformer Translation with LoRA
+# Korean-English Transformer Translation with LoRA
 
 ## Overview
 
-This project implements an English-to-Korean neural machine translation model based on the Transformer architecture and applies LoRA for parameter-efficient fine-tuning.
+This project implements an Krean-to-English neural machine translation model based on the Transformer architecture and applies LoRA for parameter-efficient fine-tuning.
 
 The goal is to compare a baseline Transformer model and a LoRA-adapted Transformer in terms of translation quality and training efficiency.
 
@@ -18,7 +18,7 @@ The goal is to compare a baseline Transformer model and a LoRA-adapted Transform
 - [x] Transformer baseline implementation
 - [x] Dataset preprocessing
 - [x] Training loop
-- [ ] Baseline evaluation
+- [x] Baseline evaluation
 - [ ] LoRA module implementation
 - [ ] LoRA training
 - [ ] Baseline vs LoRA comparison

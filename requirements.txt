@@ -1,0 +1,10 @@
+torch
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14.0
+sentencepiece>=0.1.99
+sacrebleu>=2.4
+bert-score>=0.3.13
+transformers>=4.40
+tqdm>=4.66
+openpyxl>=3.1

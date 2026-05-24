@@ -425,7 +425,7 @@ enko-transformer-lora/
 - [x] Transformer baseline implementation
 - [x] Dataset preprocessing
 - [x] Training loop
-- [ ] Baseline evaluation
+- [x] Baseline evaluation
 - [ ] LoRA module implementation
 - [ ] LoRA training
 - [ ] Baseline vs LoRA comparison
