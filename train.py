@@ -142,10 +142,6 @@ def main():
         shuffle=False
     )
 
-    freeze_all_parameters(model)
-    unfreeze_lora_parameters(model)
-    print_trainable_parameters(model)
-
     model = make_model(
         src_vocab=16000,
         tgt_vocab=16000,
@@ -165,6 +161,11 @@ def main():
     model.to(device)
 
     criterion = nn.NLLLoss(ignore_index=0)
+
+    freeze_all_parameters(model)
+    unfreeze_lora_parameters(model)
+    print_trainable_parameters(model)
+
     optimizer = Adam(
         [p for p in model.parameters() if p.requires_grad],
         lr=5e-5,
