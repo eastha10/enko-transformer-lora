@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 from .modules import clones
+from .lora import LoRALinear
 
 
 def attention(query, key, value, mask=None, dropout=None):
@@ -18,7 +19,7 @@ def attention(query, key, value, mask=None, dropout=None):
 
 
 class MultiHeadedAttention(nn.Module):
-    def __init__(self, h, d_model, dropout=0.1):
+    def __init__(self, h, d_model, dropout=0.1, use_lora = False, lora_rank=8, lora_alpha=16, lora_targets=("q", "v")):
         super(MultiHeadedAttention, self).__init__()
         assert d_model % h == 0
         self.d_k = d_model // h
@@ -26,6 +27,26 @@ class MultiHeadedAttention(nn.Module):
         self.linears = clones(nn.Linear(d_model, d_model), 4)
         self.attn = None
         self.dropout = nn.Dropout(p=dropout)
+
+        target_map = {
+            "q": 0,
+            "k": 1,
+            "v": 2,
+            "o": 3,
+        }
+
+        if use_lora:
+            for target in lora_targets:
+                if target not in target_map:
+                    raise ValueError(f"Invalid LoRA target: {target}")
+                
+                idx = target_map[target]
+                self.linears[idx] = LoRALinear(
+                    self.linears[idx],
+                    lora_rank,
+                    lora_alpha
+                )
+
 
     def forward(self, query, key, value, mask=None):
         if mask is not None:

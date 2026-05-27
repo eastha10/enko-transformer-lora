@@ -93,7 +93,7 @@ def subsequent_mask(size): # 디코더가 예측에서 미래 토큰을 못보�
   )
   return subsequent_mask == 0
 
-def make_model(src_vocab, tgt_vocab, N_en=6, N_de=3, d_model=256, d_ff=1024, h=4, dropout=0.1):
+def make_model(src_vocab, tgt_vocab, N_en=6, N_de=3, d_model=256, d_ff=1024, h=4, dropout=0.1): # 레이어 갯수 수정 시 N_en, N_de 건드릴 것.
   c = copy.deepcopy
   attn = MultiHeadedAttention(h, d_model)
   ff = PositionwiseFeedForward(d_model, d_ff, dropout)
