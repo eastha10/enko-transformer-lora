@@ -96,6 +96,29 @@ def evaluate(model, valid_loader, criterion, device, max_steps=None):
 
     return total_loss / total_steps
 
+def freeze_all_parameters(model):
+    for p in model.parameters():
+        p.requires_grad = False
+
+def unfreeze_lora_parameters(model):
+    for name, p in model.named_parameters():
+        if "lora_a" in name or "lora_b" in name:
+            p.requires_grad = True
+
+def print_trainable_parameters(model):
+    trainable = 0
+    total = 0
+
+    for name, p in model.named_parameters():
+        total += p.numel()
+        if p.requires_grad:
+            trainable += p.numel()
+            print(name, p.numel())
+
+    print(f"Trainable params: {trainable}")
+    print(f"Total params: {total}")
+    print(f"Trainable ratio: {100 * trainable / total:.4f}%")
+
 def main():
     save_dir = "checkpoints"
 
@@ -119,6 +142,10 @@ def main():
         shuffle=False
     )
 
+    freeze_all_parameters(model)
+    unfreeze_lora_parameters(model)
+    print_trainable_parameters(model)
+
     model = make_model(
         src_vocab=16000,
         tgt_vocab=16000,
@@ -127,14 +154,22 @@ def main():
         N_de=3,
         d_ff=1024,
         h=4,
-        dropout=0.1
+        dropout=0.1,
+        use_lora=True,
+        lora_rank=8,
+        lora_alpha=16,
+        lora_targets=("q", "v")
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     criterion = nn.NLLLoss(ignore_index=0)
-    optimizer = Adam(model.parameters(), lr=5e-5, eps=1e-9)
+    optimizer = Adam(
+        [p for p in model.parameters() if p.requires_grad],
+        lr=5e-5,
+        eps=1e-9
+    )
 
     ## 수정: optimizer까지 만든 뒤에 checkpoint를 불러와야 함
     ## 이유: checkpoint 안에 optimizer_state_dict도 들어있기 때문
