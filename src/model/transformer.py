@@ -93,9 +93,17 @@ def subsequent_mask(size): # 디코더가 예측에서 미래 토큰을 못보�
   )
   return subsequent_mask == 0
 
-def make_model(src_vocab, tgt_vocab, N_en=6, N_de=3, d_model=256, d_ff=1024, h=4, dropout=0.1): # 레이어 갯수 수정 시 N_en, N_de 건드릴 것.
+def make_model(src_vocab, tgt_vocab, N_en=6, N_de=3, d_model=256, d_ff=1024, h=4, dropout=0.1, use_lora=False, lora_targets=("q", "v"), lora_rank=8, lora_alpha=16): # 레이어 갯수 수정 시 N_en, N_de 건드릴 것.
   c = copy.deepcopy
-  attn = MultiHeadedAttention(h, d_model)
+  attn = MultiHeadedAttention(
+    h=h,
+    d_model=d_model,
+    dropout=dropout,
+    use_lora=use_lora,
+    lora_rank=lora_rank,
+    lora_alpha=lora_alpha,
+    lora_targets=lora_targets
+    )
   ff = PositionwiseFeedForward(d_model, d_ff, dropout)
   position = PositionalEncoding(d_model, dropout)
   model = EncoderDecoder(
@@ -106,7 +114,11 @@ def make_model(src_vocab, tgt_vocab, N_en=6, N_de=3, d_model=256, d_ff=1024, h=4
       Generator(d_model, tgt_vocab),
   )
 
-  for p in model.parameters():
-      if p.dim() > 1:
-          nn.init.xavier_uniform_(p)
+  for name, p in model.named_parameters():
+      if p.dim() > 1 and "lora_b" not in name:
+            nn.init.xavier_uniform_(p)
+
+  for name, p in model.named_parameters():
+        if "lora_b" in name:
+            nn.init.zeros_(p)
   return model
