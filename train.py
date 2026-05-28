@@ -68,14 +68,6 @@ def train_one_epoch(
             "avg_loss": avg_loss
         })
 
-        if (step + 1) % log_interval == 0:
-            print(
-                f"[Epoch {epoch}] "
-                f"step: {step + 1}, "
-                f"loss: {loss.item():.4f}, "
-                f"avg_loss: {avg_loss:.4f}"
-            )
-
     return total_loss / total_steps
 
 @torch.no_grad()
@@ -119,11 +111,75 @@ def print_trainable_parameters(model):
     print(f"Total params: {total}")
     print(f"Trainable ratio: {100 * trainable / total:.4f}%")
 
-def main():
-    save_dir = "checkpoints"
+def build_model(mode, device):
+    if mode == "baseline":
+        model = make_model(
+            src_vocab=16000,
+            tgt_vocab=16000,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=False
+        )
 
-    ## 수정: 최종적으로 몇 epoch까지 학습할지 정해야 함
-    ## 예: checkpoint-epoch-3.pt가 있으면 4부터 시작해서 5까지 학습
+    elif mode == "lora":
+        model = make_model(
+            src_vocab=16000,
+            tgt_vocab=16000,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=8,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+
+        freeze_all_parameters(model)
+        unfreeze_lora_parameters(model)
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+
+    return model.to(device)
+
+def build_optimizer(model, mode):
+    if mode == "baseline":
+        return Adam(
+            model.parameters(),
+            lr=5e-5,
+            eps=1e-9
+        )
+
+    elif mode == "lora":
+        return Adam(
+            [p for p in model.parameters() if p.requires_grad],
+            lr=5e-5,
+            eps=1e-9
+        )
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+    
+def get_save_dir(mode):
+    if mode == "baseline":
+        return "checkpoints"
+
+    elif mode == "lora":
+        return "checkpoints/lora"
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+    
+def main():
+    mode = "baseline"
+    save_dir = get_save_dir(mode)
     total_epochs = 5
 
     train_loader = build_dataloader(
@@ -142,38 +198,14 @@ def main():
         shuffle=False
     )
 
-    model = make_model(
-        src_vocab=16000,
-        tgt_vocab=16000,
-        d_model=256,
-        N_en=6,
-        N_de=3,
-        d_ff=1024,
-        h=4,
-        dropout=0.1,
-        use_lora=True,
-        lora_rank=8,
-        lora_alpha=16,
-        lora_targets=("q", "v")
-    )
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
 
-    criterion = nn.NLLLoss(ignore_index=0)
-
-    freeze_all_parameters(model)
-    unfreeze_lora_parameters(model)
+    model = build_model(mode, device)
     print_trainable_parameters(model)
 
-    optimizer = Adam(
-        [p for p in model.parameters() if p.requires_grad],
-        lr=5e-5,
-        eps=1e-9
-    )
+    criterion = nn.NLLLoss(ignore_index=0)
+    optimizer = build_optimizer(model, mode)
 
-    ## 수정: optimizer까지 만든 뒤에 checkpoint를 불러와야 함
-    ## 이유: checkpoint 안에 optimizer_state_dict도 들어있기 때문
     start_epoch = load_checkpoint_if_exists(
         model=model,
         optimizer=optimizer,
@@ -181,13 +213,10 @@ def main():
         device=device
     )
 
-    ## 수정: 이미 목표 epoch까지 학습된 경우 바로 종료
-    ## 예: checkpoint-epoch-5.pt가 있는데 total_epochs=5면 더 학습할 필요 없음
     if start_epoch > total_epochs:
         print(f"Already trained up to epoch {start_epoch - 1}.")
         return
 
-    ## 수정: range(1, epochs + 1)이 아니라 start_epoch부터 시작해야 함
     for epoch in range(start_epoch, total_epochs + 1):
         train_loss = train_one_epoch(
             model=model,
@@ -200,7 +229,6 @@ def main():
 
         print(f"[Epoch {epoch}] train_loss: {train_loss:.4f}")
 
-        ## 수정: valid_loader를 만들었으니 epoch마다 evaluate 실행
         valid_loss = evaluate(
             model=model,
             valid_loader=valid_loader,
@@ -210,7 +238,6 @@ def main():
 
         print(f"[Epoch {epoch}] valid_loss: {valid_loss:.4f}")
 
-        ## 수정: checkpoint 저장은 train_loss, valid_loss가 계산된 뒤에 해야 함
         save_checkpoint(
             model=model,
             optimizer=optimizer,
