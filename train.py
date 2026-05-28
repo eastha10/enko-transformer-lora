@@ -4,6 +4,7 @@ from src.data import make_batch
 from src.checkpoint import save_checkpoint, load_checkpoint_if_exists
 
 import torch
+import argparse
 from torch import nn
 from torch.optim import Adam
 from tqdm.auto import tqdm
@@ -97,7 +98,7 @@ def unfreeze_lora_parameters(model):
         if "lora_a" in name or "lora_b" in name:
             p.requires_grad = True
 
-def print_trainable_parameters(model):
+def print_trainable_parameters(model, verbose=False):
     trainable = 0
     total = 0
 
@@ -105,7 +106,8 @@ def print_trainable_parameters(model):
         total += p.numel()
         if p.requires_grad:
             trainable += p.numel()
-            print(name, p.numel())
+            if verbose:
+                print(name, p.numel())
 
     print(f"Trainable params: {trainable}")
     print(f"Total params: {total}")
@@ -178,8 +180,21 @@ def get_save_dir(mode):
         raise ValueError(f"Unknown mode: {mode}")
     
 def main():
-    mode = "baseline"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="baseline",
+        choices=["baseline", "lora"]
+    )
+    args = parser.parse_args()
+
+    mode = args.mode
     save_dir = get_save_dir(mode)
+
+    print(f"Mode: {mode}")
+    print(f"Save dir: {save_dir}")
+
     total_epochs = 5
 
     train_loader = build_dataloader(
@@ -201,7 +216,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = build_model(mode, device)
-    print_trainable_parameters(model)
+    print_trainable_parameters(model, verbose=(mode == "lora"))
 
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = build_optimizer(model, mode)
