@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import sentencepiece as spm
 from tqdm import tqdm
+import argparse
 
 from src.data import build_dataloader, make_batch, make_src_mask
 from src.model import make_model
@@ -24,11 +25,29 @@ TGT_VOCAB_SIZE = 16000
 TEST_PARQUET_PATH = "data/test.parquet"
 SRC_SPM_PATH = "tokenizer/src_spm.model"
 TGT_SPM_PATH = "tokenizer/tgt_spm.model"
-CHECKPOINT_DIR = "checkpoints"
 
 MAX_LEN = 60
-MAX_SAMPLES = 100
+MAX_SAMPLES = None
 SAMPLE_COUNT = 5
+
+def get_save_dir(mode):
+    if mode == "baseline":
+        return "checkpoints"
+
+    elif mode == "fft":
+        return "checkpoints/fft"
+
+    elif mode == "lora_r4":
+        return "checkpoints/lora_r4"
+    
+    elif mode == "lora_r8":
+        return "checkpoints/lora_r8"
+    
+    elif mode == "lora_r16":
+        return "checkpoints/lora_r16"
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
 
 
 def load_tokenizers(src_spm_path, tgt_spm_path):
@@ -236,11 +255,95 @@ def print_sample_translations(samples):
         print("Reference  :", sample["reference"])
 
 
+def build_eval_model(mode, device):
+    if mode in ["baseline", "fft"]:
+        model = make_model(
+            src_vocab=SRC_VOCAB_SIZE,
+            tgt_vocab=TGT_VOCAB_SIZE,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=False
+        )
+
+    elif mode == "lora_r4":
+        model = make_model(
+            src_vocab=SRC_VOCAB_SIZE,
+            tgt_vocab=TGT_VOCAB_SIZE,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=4,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+    
+    elif mode == "lora_r8":
+        model = make_model(
+            src_vocab=SRC_VOCAB_SIZE,
+            tgt_vocab=TGT_VOCAB_SIZE,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=8,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+    
+    elif mode == "lora_r16":
+        model = make_model(
+            src_vocab=SRC_VOCAB_SIZE,
+            tgt_vocab=TGT_VOCAB_SIZE,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=16,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+
+    else:
+        raise ValueError(f"Unknown mode: {mode}")
+
+    return model.to(device)
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="baseline",
+        choices=["baseline", "fft", "lora_r4", "lora_r8", "lora_r16"]
+    )
+    args = parser.parse_args()
+
+    mode = args.mode
+    checkpoint_dir = get_save_dir(mode)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    print("Mode:", mode)
+    print("Checkpoint dir:", checkpoint_dir)
     print("Device:", device)
     print("CUDA available:", torch.cuda.is_available())
+    if device.type == "cuda":
+        print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
     src_sp, tgt_sp = load_tokenizers(
         src_spm_path=SRC_SPM_PATH,
@@ -263,16 +366,18 @@ def main():
         shuffle=False
     )
 
-    model = make_model(
-        src_vocab=SRC_VOCAB_SIZE,
-        tgt_vocab=TGT_VOCAB_SIZE
-    ).to(device)
+    model = build_eval_model(
+        mode=mode,
+        device=device
+    )
 
     model, checkpoint = load_model_checkpoint(
         model=model,
-        save_dir=CHECKPOINT_DIR,
+        save_dir=checkpoint_dir,
         device=device
     )
+
+    print(f"Loaded checkpoint epoch: {checkpoint.get('epoch', 'unknown')}")
 
     test_loss, ppl = evaluate_loss(
         model=model,

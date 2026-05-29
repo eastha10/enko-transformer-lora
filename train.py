@@ -186,7 +186,26 @@ def build_model(mode, device):
             use_lora=False
         )
 
-    elif mode == "lora":
+    elif mode == "lora_r4":
+        model = make_model(
+            src_vocab=16000,
+            tgt_vocab=16000,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=4,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+
+        freeze_all_parameters(model)
+        unfreeze_lora_parameters(model)
+
+    elif mode == "lora_r8":
         model = make_model(
             src_vocab=16000,
             tgt_vocab=16000,
@@ -198,6 +217,25 @@ def build_model(mode, device):
             dropout=0.1,
             use_lora=True,
             lora_rank=8,
+            lora_alpha=16,
+            lora_targets=("q", "v")
+        )
+
+        freeze_all_parameters(model)
+        unfreeze_lora_parameters(model)
+
+    elif mode == "lora_r16":
+        model = make_model(
+            src_vocab=16000,
+            tgt_vocab=16000,
+            d_model=256,
+            N_en=6,
+            N_de=3,
+            d_ff=1024,
+            h=4,
+            dropout=0.1,
+            use_lora=True,
+            lora_rank=16,
             lora_alpha=16,
             lora_targets=("q", "v")
         )
@@ -218,12 +256,13 @@ def build_optimizer(model, mode):
             eps=1e-9
         )
 
-    elif mode == "lora":
+    elif mode in ["lora_r4", "lora_r8", "lora_r16"]:
         return Adam(
             [p for p in model.parameters() if p.requires_grad],
             lr=5e-5,
             eps=1e-9
         )
+    
 
     else:
         raise ValueError(f"Unknown mode: {mode}")
@@ -235,8 +274,14 @@ def get_save_dir(mode):
     elif mode == "fft":
         return "checkpoints/fft"
 
-    elif mode == "lora":
-        return "checkpoints/lora"
+    elif mode == "lora_r4":
+        return "checkpoints/lora_r4"
+
+    elif mode == "lora_r8":
+        return "checkpoints/lora_r8"
+    
+    elif mode == "lora_r16":
+        return "checkpoints/lora_r16"
 
     else:
         raise ValueError(f"Unknown mode: {mode}")
@@ -269,7 +314,7 @@ def main():
         "--mode",
         type=str,
         default="baseline",
-        choices=["baseline", "fft", "lora"]
+        choices=["baseline", "fft", "lora_r4", "lora_r8", "lora_r16"]
     )
     args = parser.parse_args()
 
@@ -298,9 +343,11 @@ def main():
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cuda":
+        print(f"CUDA device: {torch.cuda.get_device_name(0)}")
 
     model = build_model(mode, device)
-    print_trainable_parameters(model, verbose=(mode == "lora"))
+    print_trainable_parameters(model, verbose=mode.startswith("lora"))
 
     criterion = nn.NLLLoss(ignore_index=0)
     optimizer = build_optimizer(model, mode)
@@ -330,7 +377,7 @@ def main():
                 device=device
             )
 
-    elif mode == "lora":
+    elif mode in ["lora_r4", "lora_r8", "lora_r16"]:
         start_epoch = load_checkpoint_if_exists(
             model=model,
             optimizer=optimizer,
